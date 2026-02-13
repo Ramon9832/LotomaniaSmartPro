@@ -36,8 +36,8 @@
 </div>
 
 <script>
-    // PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT
-    const URL_API = "PEGA_AQUÍ_TU_URL_DE_APPS_SCRIPT"; 
+    // ESTA ES LA URL QUE ME PASASTE, YA ESTÁ CONFIGURADA ABAJO
+    const URL_API = "https://script.google.com/macros/s/AKfycbw_DcvzhW2VC5fZeSluOM-zk-bfaFO8ZAdc6gCtEaZkjA1iWAQb0FLfjWh97tTl-yKnGg/exec"; 
 
     let db_numeros = [];
 
@@ -59,7 +59,6 @@
         const listDiv = document.getElementById("lista");
         listDiv.innerHTML = "<p>Aplicando filtros de probabilidad...</p>";
         
-        // 1. Calcular frecuencias de los datos reales
         let freq = {};
         db_numeros.forEach(fila => {
             if(fila[2]) fila[2].toString().split(" ").forEach(n => {
@@ -68,13 +67,11 @@
             });
         });
 
-        // 2. Definir Núcleo Sólido (8 centrales por decena)
         let nucleo = [];
         for(let d=0; d<10; d++) {
             for(let n=2; n<=9; n++) nucleo.push((d*10 + n).toString().padStart(2,"0"));
         }
 
-        // 3. Obtener los 5 más probables de los restantes (terminados en 0 y 1)
         let restantes = [];
         for(let i=0; i<100; i++) {
             let s = i.toString().padStart(2,"0");
@@ -83,7 +80,6 @@
         restantes.sort((a,b) => (freq[b]||0) - (freq[a]||0));
         let universo = [...nucleo, ...restantes.slice(0, 5)];
 
-        // 4. Generar jugadas con filtros
         let html = "";
         const cant = document.getElementById("cant").value;
 
