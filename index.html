@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Lotomania PRO v3.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        :root { --p: #1b5e20; --s: #c8e6c9; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 600px; width: 100%; text-align: center; }
+        .status { padding: 10px; border-radius: 10px; margin-bottom: 20px; font-weight: bold; font-size: 14px; }
+        .connected { background: var(--s); color: var(--p); }
+        .loading { background: #fff3e0; color: #e65100; }
+        button { background: var(--p); color: white; border: none; padding: 15px 30px; border-radius: 12px; font-size: 16px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.3s; }
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(27,94,32,0.3); }
+        .game { background: #f8f9fa; border-left: 5px solid var(--p); padding: 15px; margin-top: 15px; text-align: left; border-radius: 0 10px 10px 0; }
+        .nums { font-family: 'Courier New', monospace; font-weight: bold; color: #333; letter-spacing: 1px; word-break: break-all; }
+        .mirror { border-left-color: #0277bd; background: #e1f5fe; margin-top: 5px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>🎯 Lotomania PRO</h1>
+    <div id="status" class="status loading">⏳ Sincronizando con Google Sheets...</div>
+    
+    <label style="display:block; margin-bottom: 10px; font-weight: bold;">Cantidad de Jugadas:</label>
+    <select id="cant" style="width: 100%; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
+        <option value="5">5 Juegos + Espejos</option>
+        <option value="10">10 Juegos + Espejos</option>
+    </select>
+
+    <button onclick="generar()">GENERAR JUGADAS MAESTRAS</button>
+
+    <div id="lista"></div>
+</div>
+
+<script>
+    // PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT
+    const URL_API = "PEGA_AQUÍ_TU_URL_DE_APPS_SCRIPT"; 
+
+    let db_numeros = [];
+
+    async function sync() {
+        try {
+            const r = await fetch(URL_API);
+            const data = await r.json();
+            db_numeros = data;
+            document.getElementById("status").className = "status connected";
+            document.getElementById("status").textContent = ✅ CONECTADO: ${data.length} Sorteos Analizados;
+        } catch (e) {
+            document.getElementById("status").textContent = "❌ Error de conexión. Revisa el Paso 1.";
+        }
+    }
+
+    function generar() {
+        if(db_numeros.length === 0) return alert("Esperando datos...");
+        
+        const listDiv = document.getElementById("lista");
+        listDiv.innerHTML = "<p>Aplicando filtros de probabilidad...</p>";
+        
+        // 1. Calcular frecuencias de los datos reales
+        let freq = {};
+        db_numeros.forEach(fila => {
+            if(fila[2]) fila[2].toString().split(" ").forEach(n => {
+                let num = n.padStart(2, "0");
+                freq[num] = (freq[num] || 0) + 1;
+            });
+        });
+
+        // 2. Definir Núcleo Sólido (8 centrales por decena)
+        let nucleo = [];
+        for(let d=0; d<10; d++) {
+            for(let n=2; n<=9; n++) nucleo.push((d*10 + n).toString().padStart(2,"0"));
+        }
+
+        // 3. Obtener los 5 más probables de los restantes (terminados en 0 y 1)
+        let restantes = [];
+        for(let i=0; i<100; i++) {
+            let s = i.toString().padStart(2,"0");
+            if(!nucleo.includes(s)) restantes.push(s);
+        }
+        restantes.sort((a,b) => (freq[b]||0) - (freq[a]||0));
+        let universo = [...nucleo, ...restantes.slice(0, 5)];
+
+        // 4. Generar jugadas con filtros
+        let html = "";
+        const cant = document.getElementById("cant").value;
+
+        for(let g=0; g<cant; g++) {
+            let juego = universo.sort(() => 0.5 - Math.random()).slice(0, 50).sort((a,b)=>a-b);
+            let espejo = [];
+            for(let i=0; i<100; i++) {
+                let s = i.toString().padStart(2,"0");
+                if(!juego.includes(s)) espejo.push(s);
+            }
+
+            html += `
+                <div class="game">
+                    <strong>JUEGO ${g+1}:</strong><br>
+                    <span class="nums">${juego.join(" ")}</span>
+                </div>
+                <div class="game mirror">
+                    <strong>🔄 ESPEJO:</strong><br>
+                    <span class="nums">${espejo.join(" ")}</span>
+                </div>
+            `;
+        }
+        listDiv.innerHTML = html;
+    }
+
+    sync();
+</script>
+
+</body>
+</html>
